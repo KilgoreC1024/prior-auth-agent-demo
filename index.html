@@ -88,6 +88,13 @@
   .next { font-size:.86rem; padding-left:20px; }
   .next li { margin:3px 0; }
   .err { color:var(--hi-ink); font-size:.88rem; background:var(--hi-bg); border-radius:6px; padding:10px 14px; }
+  .chatbox { border-top:1px solid var(--line); margin-top:14px; padding-top:12px; }
+  .chatthread { display:flex; flex-direction:column; gap:8px; margin-bottom:10px; }
+  .chatq { font-size:.86rem; font-style:italic; color:var(--accent-deep); }
+  .chata { font-size:.86rem; color:var(--ink); max-width:70ch; white-space:pre-wrap; }
+  .chatrow { display:flex; gap:8px; }
+  .chatrow input { flex:1; }
+  .chatrow .runbtn { width:auto; padding:8px 18px; font-size:.85rem; }
   code { font-family:Consolas,ui-monospace,monospace; font-size:.85em; background:var(--code-bg);
          padding:1px 6px; border-radius:4px; }
   footer { color:var(--muted); font-size:.78rem; margin-top:28px; }
@@ -432,6 +439,33 @@ function llmJson(system, prompt, schema) {
     : llmOpenAI(cfg, system, prompt, schema);
 }
 
+// Plain-text chat (no JSON schema) — used by the follow-up Q&A.
+async function llmText(system, chatTurns) {
+  var cfg = loadCfg();
+  if (!cfg) throw new Error("NEEDKEY: no provider configured");
+  if (cfg.provider === "anthropic") {
+    var resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": cfg.key,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({ model: "claude-opus-4-8", max_tokens: 1000,
+                             system: system, messages: chatTurns })
+    });
+    if (!resp.ok) {
+      if (resp.status === 401) throw new Error("NEEDKEY: Anthropic rejected the stored key.");
+      throw new Error("Anthropic API error " + resp.status);
+    }
+    var data = await resp.json();
+    if (data.stop_reason === "refusal") throw new Error("The model declined the request.");
+    return (data.content.find(function (b) { return b.type === "text"; }) || {}).text || "";
+  }
+  return openaiChat(cfg, [{ role: "system", content: system }].concat(chatTurns));
+}
+
 function llmLabel() {
   var cfg = loadCfg();
   if (!cfg) return "not configured yet";
@@ -638,8 +672,62 @@ function renderResult(result, policy, addendaUsed, fin) {
     result.recommended_next_steps.forEach(function (s) { h += "<li>" + esc(s) + "</li>"; });
     h += "</ul>";
   }
+  h += '<div class="chatbox"><p class="lbl">Ask the reviewer — follow-up on this checklist</p>';
+  h += '<div class="chatthread" id="chatthread"></div>';
+  h += '<div class="chatrow"><input type="text" id="chatinput" ' +
+       'placeholder="e.g. Why is the frailty assessment required?">' +
+       '<button type="button" class="runbtn" id="chatask">Ask</button></div></div>';
   h += "</div>";
   resultEl.innerHTML = h;
+  wireFollowup();
+}
+
+var FOLLOWUP_SYSTEM_BASE =
+  "You are the prior-authorization completeness reviewer who just produced the checklist in the " +
+  "RUN RECORD below. Answer the user's follow-up questions about this specific run. Ground every " +
+  "answer in the run record — the governing policy text, the completeness-check tool output, and " +
+  "the financial-impact tool output. Use ONLY the dollar figures provided by the financial-impact " +
+  "tool; never invent or recalculate numbers. If a question requires clinical judgment or goes " +
+  "beyond this run, say so plainly and recommend the payer policy or a human specialist. Keep " +
+  "answers to 2-5 sentences in plain English for a non-clinical operations audience. Write plain " +
+  "text only -- no markdown, no asterisks, no bullet formatting.";
+
+var followupCtx = null;   // set after each completed run
+var chatTurns = [];
+
+function wireFollowup() {
+  chatTurns = [];
+  var input = document.getElementById("chatinput");
+  var btn = document.getElementById("chatask");
+  var thread = document.getElementById("chatthread");
+  async function ask() {
+    var q = input.value.trim();
+    if (!q || btn.disabled) return;
+    input.value = "";
+    var qEl = document.createElement("div");
+    qEl.className = "chatq"; qEl.textContent = "You: " + q;
+    thread.appendChild(qEl);
+    var aEl = document.createElement("div");
+    aEl.className = "chata"; aEl.textContent = "…thinking";
+    thread.appendChild(aEl);
+    btn.disabled = true;
+    chatTurns.push({ role: "user", content: q });
+    try {
+      var system = FOLLOWUP_SYSTEM_BASE + "\n\nRUN RECORD:\n" + JSON.stringify(followupCtx, null, 2);
+      var answer = (await llmText(system, chatTurns)).replace(/\*\*/g, "");
+      chatTurns.push({ role: "assistant", content: answer });
+      aEl.textContent = answer;
+    } catch (e) {
+      chatTurns.pop();
+      aEl.textContent = "Could not get an answer: " + (e.message || e);
+      aEl.className = "chata err";
+    } finally {
+      btn.disabled = false;
+      input.focus();
+    }
+  }
+  btn.addEventListener("click", ask);
+  input.addEventListener("keydown", function (e) { if (e.key === "Enter") ask(); });
 }
 
 function renderEscalation(reason, payer, procedure, candidates) {
@@ -750,6 +838,19 @@ runBtn.addEventListener("click", async function () {
                                checklistPrompt(scenario, policy, addendaUsed, check, fin),
                                SCHEMAS.checklist);
     traceLine("final risk flag: " + result.risk_flag, { hl: result.risk_flag === "HIGH" });
+    followupCtx = {
+      governing_policy: { policy_id: policy.policy_id, payer: policy.payer,
+                          procedure: policy.procedure, full_text: policy.body },
+      addenda_applied: addendaUsed.map(function (id) {
+        var a = findAddendum(id);
+        return { addendum_id: id, full_text: a ? a.body : "(not found)" };
+      }),
+      submission: scenario,
+      combined_required_documents: required,
+      completeness_check_tool_output: check,
+      financial_impact_tool_output: fin,
+      final_checklist: result
+    };
     renderResult(result, policy, addendaUsed, fin);
   } catch (e) {
     var msg = String(e.message || e);
