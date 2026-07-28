@@ -709,7 +709,8 @@ function extractPlain(t) {
       var s = m[1];
       var end = s.lastIndexOf('"');
       if (end > 0) s = s.slice(0, end);
-      return s.replace(/\\n/g, "\n").replace(/\\"/g, '"').trim();
+      return s.replace(/\\n/g, "\n").replace(/\\"/g, '"')
+              .replace(/[}"\s​-‍﻿]+$/, "").trim();
     }
   }
   return t;
