@@ -696,21 +696,23 @@ var FOLLOWUP_SYSTEM_BASE =
   "your answer in JSON or braces.";
 
 // Some open models wrap chat answers in JSON despite instructions — unwrap them.
+function scrubTail(s) {
+  return s.replace(/[}"\s\u200B-\u200D\uFEFF]+$/, "").trim();
+}
 function extractPlain(t) {
   t = String(t).trim().replace(/\*\*/g, "");
   if (t[0] !== "{") return t;
   try {
     var o = JSON.parse(t);
     var vals = Object.values(o).filter(function (v) { return typeof v === "string"; });
-    if (vals.length) return vals.join("\n").trim();
+    if (vals.length) return scrubTail(vals.join("\n"));
   } catch (e) {
     var m = t.match(/"(?:response|answer|text|message)"\s*:\s*"([\s\S]*)/);
     if (m) {
       var s = m[1];
       var end = s.lastIndexOf('"');
       if (end > 0) s = s.slice(0, end);
-      return s.replace(/\\n/g, "\n").replace(/\\"/g, '"')
-              .replace(/[}"\s​-‍﻿]+$/, "").trim();
+      return scrubTail(s.replace(/\\n/g, "\n").replace(/\\"/g, '"'));
     }
   }
   return t;
