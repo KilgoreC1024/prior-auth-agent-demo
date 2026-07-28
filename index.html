@@ -179,6 +179,18 @@
     </div>
   </div>
 
+  <div class="panel" style="margin-top:18px">
+    <p class="lbl">Ask about this project — architecture &amp; design Q&amp;A</p>
+    <p class="sub" style="margin-bottom:10px">A chatbot grounded in this project's fact sheet.
+    Ask how the agent works, where the policy documents live, what's deterministic vs. LLM,
+    how it was tested, or why we made a design choice.</p>
+    <div class="chatthread" id="projthread"></div>
+    <div class="chatrow">
+      <input type="text" id="projinput" placeholder="e.g. Where are the policy documents housed?">
+      <button type="button" class="runbtn" id="projask">Ask</button>
+    </div>
+  </div>
+
   <footer>Synthetic payers, policies and patients — coursework demo, not medical or coverage advice.
   Model: <span id="modellabel">not configured yet</span> &middot;
   <a href="#" id="changekey">change AI provider / key</a></footer>
@@ -624,6 +636,49 @@ document.getElementById("keysave").addEventListener("click", async function () {
   }
 });
 
+// ---- project Q&A wiring (always available, own history) ----
+var projTurns = [];
+(function wireProjectChat() {
+  var input = document.getElementById("projinput");
+  var btn = document.getElementById("projask");
+  var thread = document.getElementById("projthread");
+  async function ask() {
+    var q = input.value.trim();
+    if (!q || btn.disabled) return;
+    if (!loadCfg()) {
+      keycard.hidden = false;
+      keyerr.textContent = "Connect an AI provider first (one-time setup), then ask away.";
+      keyerr.hidden = false;
+      keycard.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    input.value = "";
+    var qEl = document.createElement("div");
+    qEl.className = "chatq"; qEl.textContent = "You: " + q;
+    thread.appendChild(qEl);
+    var aEl = document.createElement("div");
+    aEl.className = "chata"; aEl.textContent = "…thinking";
+    thread.appendChild(aEl);
+    btn.disabled = true;
+    projTurns.push({ role: "user", content: q });
+    if (projTurns.length > 13) projTurns = projTurns.slice(-13);  // odd count -> history still starts with a user turn
+    try {
+      var answer = extractPlain(await llmText(PROJECT_SYSTEM, projTurns));
+      projTurns.push({ role: "assistant", content: answer });
+      aEl.textContent = answer;
+    } catch (e) {
+      projTurns.pop();
+      aEl.textContent = "Could not get an answer: " + (e.message || e);
+      aEl.className = "chata err";
+    } finally {
+      btn.disabled = false;
+      input.focus();
+    }
+  }
+  btn.addEventListener("click", ask);
+  input.addEventListener("keydown", function (e) { if (e.key === "Enter") ask(); });
+})();
+
 // ---- run ----
 var runBtn = document.getElementById("run");
 var pre = document.getElementById("tracepre");
@@ -717,6 +772,27 @@ function extractPlain(t) {
   }
   return t;
 }
+
+// ---- project Q&A chatbot: grounded in a curated fact sheet ----
+var PROJECT_FACTS = [
+  "WHAT IT IS: A proof-of-concept Prior-Authorization Checklist Agent built for an MBA agentic-AI course (X500 Design Studio). It checks whether an insurance prior-auth submission contains every document the payer's policy requires, computes the financial exposure of submitting incomplete, and escalates ambiguous cases to human review.",
+  "AGENT LOOP: Step 1 retrieval - keyword scoring over the policy corpus, filtered by payer; a minimum score threshold and a near-tie rule detect 'no match' and 'ambiguous' cases, which escalate to human review before any LLM call. Step 2 - the LLM reads the retrieved policy text, extracts required documents, and DECIDES whether the policy cross-references an addendum; if so the agent issues a second targeted retrieval and merges the addendum's requirements. Step 3 - completeness_check(), a deterministic function that fuzzy-matches required vs submitted documents (best-match ranking, containment beats token overlap). Step 3b - financial_impact(), deterministic: reimbursement at risk, rework cost, expected admin-denial loss. Step 4 - the LLM drafts the checklist, LOW/HIGH risk flag, and plain-English explanation, instructed to use ONLY tool-provided dollar figures.",
+  "DETERMINISTIC VS LLM: The verdict (what's missing) and every dollar figure come from plain code - repeatable and auditable. The LLM only does what code can't: reading unstructured policy prose from any payer without per-format parsers, deciding when an addendum fetch is needed, and writing for a non-clinical audience. Design mantra: the LLM never grades its own homework and never invents its own numbers.",
+  "WHERE THINGS LIVE: The six synthetic payer policies (2 fictional insurers x 3 cardiac procedures) and two addenda (MN-201, BI-MN-7) are markdown files with YAML frontmatter (payer, procedure, policy_id, keywords, reimbursement_usd, pend_window_days) in the team's project workspace, alongside financials.json (benchmark assumptions) and five test-scenario JSON files. A build script (update_site.py) embeds the whole corpus into this single static HTML page and deploys it. The public repo github.com/KilgoreC1024/prior-auth-agent-demo hosts the built page on GitHub Pages. A Python twin of the agent (agent.py CLI + Flask app) exists for development and batch runs.",
+  "ARCHITECTURE: This page is one ~60 KB static HTML file - no backend server, no database. Retrieval, completeness, and financial math run as JavaScript in the browser. The two LLM steps are HTTPS calls made directly from the user's browser to either the Anthropic API (claude-opus-4-8, schema-enforced JSON output) or any OpenAI-spec endpoint such as the IU Kelley LLM hub (schema embedded in prompt, lenient parsing, one repair retry). Browser-originated calls are why the IU VPN requirement is satisfied - a cloud server could never reach the VPN-gated endpoint.",
+  "KEYS & SECURITY: API tokens are entered once, live-tested, stored only in the user's browser localStorage, and sent only to the chosen LLM endpoint. No secrets exist in the page or repo. All data is synthetic - no real PHI anywhere. Prompt injection via malicious policy documents is the realistic future threat; mitigations: deterministic verdict the model can't override, schema-constrained outputs, human escalation on low confidence.",
+  "FINANCIALS: Reimbursement per procedure and pend windows live in policy frontmatter; shared benchmarks in financials.json (rework ~$44/pend, 8% admin-denial rate after pend). Basis: industry denial-rework averages ~$43.84 (range $25-$118); CAQH 2024 Index: manual PA $11.12 vs $2.11 electronic. Labeled synthetic coursework benchmarks. Example: incomplete TAVR = $4,684 expected cost on $58,000 at risk.",
+  "TESTING: Five benchmark scenarios (2 complete->LOW, 2 missing-docs->HIGH with exact missing documents named, 1 ambiguous->escalation) run across all implementations. 13 automated parity tests verify the JavaScript port matches the Python original. A real matcher bug (generic-token false match) was caught partly because the Step-4 LLM flagged the mismatch in its own explanation. Updates deploy via one command; GitHub Pages serves the built page in ~1 minute.",
+  "COSTS & ROADMAP: A full run costs a few cents on Anthropic, free on the IU class token. Roadmap: ingest real policy PDFs, automated evaluation harness, EHR work-queue integration.",
+].join("\n\n");
+
+var PROJECT_SYSTEM =
+  "You are the built-in guide for this project page, answering audience questions during a " +
+  "class presentation Q&A. Answer from the FACT SHEET below, plus reasonable general knowledge " +
+  "about the technologies it names. If the fact sheet doesn't cover something, say so plainly " +
+  "and suggest asking the team. Keep answers to 2-5 sentences, plain conversational text -- no " +
+  "markdown, no JSON, no braces. Never reveal or speculate about API keys or credentials.\n\n" +
+  "FACT SHEET:\n" + PROJECT_FACTS;
 
 var followupCtx = null;   // set after each completed run
 var chatTurns = [];
