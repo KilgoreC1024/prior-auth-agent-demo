@@ -1,0 +1,7 @@
+{
+  "_note": "Synthetic coursework benchmarks informed by published industry figures: denied-claim rework averages ~$43.84 (range $25-$118) per industry analyses; CAQH 2024 Index puts a manual prior authorization at $11.12/transaction vs $2.11 electronic. Reimbursement amounts are fabricated per synthetic procedure. Denial-rate-after-pend is a coursework assumption.",
+  "rework_cost_per_pend_usd": 44,
+  "admin_denial_rate_after_pend": 0.08,
+  "manual_review_minutes": 15,
+  "staff_hourly_cost_usd": 32
+}

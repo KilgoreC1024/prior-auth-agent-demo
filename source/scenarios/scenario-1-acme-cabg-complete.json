@@ -1,0 +1,15 @@
+{
+  "scenario_id": "S1",
+  "description": "Complete CABG submission to Acme Health (base policy + MN-201 addendum docs all present)",
+  "patient": "Synthetic Patient A (M, 64)",
+  "payer": "Acme Health",
+  "procedure": "Coronary Artery Bypass Graft (CABG)",
+  "documents_submitted": [
+    "Cardiology consultation note",
+    "Coronary angiography report",
+    "Echocardiogram report with LVEF (45 days old)",
+    "Heart team conference note",
+    "STS risk score worksheet",
+    "Smoking cessation counseling documentation"
+  ]
+}

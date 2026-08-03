@@ -1,0 +1,51 @@
+PRIOR-AUTHORIZATION CHECKLIST AGENT  --  how to try it (5 minutes)
+==================================================================
+
+An AI agent that checks whether an insurance prior-authorization request
+has every required document -- and escalates to a human when it's unsure.
+All payers, policies, and patients are synthetic (made up for coursework).
+
+WHAT YOU NEED
+  1. Python installed  ->  https://www.python.org/downloads/
+     (Windows: tick "Add python.exe to PATH" on the first install screen)
+  2. An LLM connection -- EITHER of:
+     a) IU Kelley LLM hub (recommended, free): use the class API token
+        shared by the team. Model access varies by team (e.g. gpt-oss-20b);
+        if your first pick is rejected, the app lists the models your
+        token can use.
+     b) Your own Anthropic API key -> https://platform.claude.com
+        (needs a few dollars of billing credit; each run costs cents)
+
+HOW TO RUN
+  Windows:      double-click  run_windows.bat
+  Mac / Linux:  open Terminal, type "bash ", drag run_mac_linux.sh onto
+                the window, press Enter
+
+  Your browser opens at http://localhost:5001 automatically.
+  The first time, the page shows a one-time setup panel: pick
+  "IU Kelley LLM hub" and paste the class token (the endpoint URL and
+  model are pre-filled), or pick "Anthropic" and paste your own key.
+  Click "Save & test connection". Settings are stored only on your
+  computer.
+
+WHAT TO TRY
+  - Click a preset button (S1-S5), then "Run the agent"
+  - Watch the execution trace: yellow lines are live Claude calls
+  - S3 is the best one: the agent detects a cross-referenced addendum,
+    fetches it, and catches a missing document that only exists there
+  - Type "Transcatheter valve intervention" -> the agent refuses to guess
+    and escalates to human review
+  - Build your own submission: pick a payer, type any procedure,
+    check off documents, and run it
+
+TROUBLESHOOTING
+  - "python is not recognized": reinstall Python with the PATH box ticked
+  - IU token rejected: check you copied the whole token; the IU hub may
+    only be reachable on the campus network or VPN
+  - Anthropic key rejected: copy the whole key (starts with sk-ant-) and
+    make sure billing is enabled on your account
+  - Nothing at localhost:5001: keep the black window open; if another app
+    uses port 5001, edit the last line of app.py to another port
+
+The IU class token may be shared within the team per course rules.
+Personal Anthropic keys should never be shared -- make your own.

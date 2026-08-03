@@ -1,0 +1,13 @@
+{
+  "scenario_id": "S2",
+  "description": "Complete diagnostic cardiac catheterization submission to Beacon Insurance (no addendum applies)",
+  "patient": "Synthetic Patient B (F, 58)",
+  "payer": "Beacon Insurance",
+  "procedure": "Cardiac Catheterization",
+  "documents_submitted": [
+    "Referring physician order",
+    "Clinical notes documenting angina symptoms",
+    "Noninvasive stress test results (abnormal nuclear perfusion study)",
+    "Current medication list"
+  ]
+}

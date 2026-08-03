@@ -1,0 +1,11 @@
+{
+  "scenario_id": "S5",
+  "description": "Ambiguous procedure name submitted to Acme Health — 'transcatheter valve intervention' plausibly matches both the aortic valve replacement policy (TAVR) and the cardiac catheterization policy. The agent must escalate to human review rather than guess.",
+  "patient": "Synthetic Patient E (F, 76)",
+  "payer": "Acme Health",
+  "procedure": "Transcatheter valve intervention",
+  "documents_submitted": [
+    "Cardiology consultation note",
+    "Transthoracic echocardiogram report"
+  ]
+}

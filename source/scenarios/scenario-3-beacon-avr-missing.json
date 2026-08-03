@@ -1,0 +1,13 @@
+{
+  "scenario_id": "S3",
+  "description": "Incomplete TAVR submission to Beacon Insurance — missing the STS surgical risk assessment (base policy) and the frailty assessment (Addendum BI-MN-7)",
+  "patient": "Synthetic Patient C (F, 81)",
+  "payer": "Beacon Insurance",
+  "procedure": "Aortic Valve Replacement (TAVR)",
+  "documents_submitted": [
+    "Cardiology consultation note",
+    "Transthoracic echocardiogram report",
+    "Heart team evaluation note",
+    "Cardiac CT angiography report"
+  ]
+}

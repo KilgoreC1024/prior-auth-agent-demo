@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prior-Auth Checklist Agent — Live (no install)</title>
+<style>
+  :root {
+    --bg:#F6F8F8; --surface:#FFFFFF; --ink:#17272D; --muted:#5A6E75; --line:#DCE4E6;
+    --accent:#0E7C86; --accent-deep:#0A5A62;
+    --ok-bg:#E2F1E7; --ok-ink:#256B40; --hi-bg:#F9E6E2; --hi-ink:#A93A2C;
+    --esc-bg:#F4EDDB; --esc-ink:#8A6A1F;
+    --term-bg:#101B1F; --term-ink:#C8DADF; --term-accent:#5FD3DD; --code-bg:#EDF2F3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#0E181C; --surface:#152329; --ink:#E3ECEE; --muted:#8FA5AC; --line:#263A42;
+      --accent:#4CC4CE; --accent-deep:#7ED8DF;
+      --ok-bg:#1C3325; --ok-ink:#85D3A0; --hi-bg:#3A211D; --hi-ink:#F0998C;
+      --esc-bg:#332B18; --esc-ink:#E0C070;
+      --term-bg:#0A1316; --code-bg:#1D2E35;
+    }
+  }
+  * { box-sizing:border-box; }
+  body { background:var(--bg); color:var(--ink); font-family:system-ui,"Segoe UI",Roboto,sans-serif;
+         line-height:1.5; margin:0; padding:24px 20px 60px; }
+  main { max-width:1120px; margin:0 auto; }
+  h1 { font-family:Charter,"Bitstream Charter",Cambria,Georgia,serif; font-size:1.5rem; margin:0; }
+  .tag { display:inline-block; font-size:.68rem; font-weight:700; letter-spacing:.1em;
+         color:var(--accent); border:1px solid var(--accent); border-radius:999px;
+         padding:1px 10px; vertical-align:3px; margin-left:10px; }
+  .sub { color:var(--muted); font-size:.88rem; margin:6px 0 20px; }
+  .cols { display:grid; grid-template-columns:420px 1fr; gap:18px; align-items:start; }
+  @media (max-width:900px) { .cols { grid-template-columns:1fr; } }
+  .panel { background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:18px 20px; }
+  legend, .lbl { font-size:.7rem; letter-spacing:.12em; text-transform:uppercase;
+                 color:var(--muted); font-weight:600; margin:0 0 8px; padding:0; }
+  fieldset { border:none; margin:0 0 16px; padding:0; }
+  input[type=radio], input[type=checkbox] { accent-color:var(--accent); }
+  .radio-row { display:flex; gap:20px; font-size:.9rem; flex-wrap:wrap; }
+  label { display:flex; gap:8px; align-items:baseline; cursor:pointer; }
+  input[type=text], input[type=password] { width:100%; font:inherit; font-size:.9rem; color:var(--ink);
+      background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:8px 12px; }
+  input:focus-visible, button:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  .keycard { border-color:var(--accent); margin-bottom:18px; }
+  .keyrow { display:flex; gap:10px; flex-wrap:wrap; }
+  .keyrow input { flex:1; min-width:220px; }
+  .keyrow .runbtn { width:auto; }
+  .keyok { color:var(--ok-ink); font-size:.88rem; }
+  a { color:var(--accent-deep); }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .chip { font:inherit; font-size:.76rem; background:var(--code-bg); color:var(--ink);
+          border:1px solid var(--line); border-radius:999px; padding:3px 11px; cursor:pointer; }
+  .chip:hover { border-color:var(--accent); color:var(--accent-deep); }
+  .docgrid { display:grid; gap:5px; font-size:.85rem; }
+  .runbtn { font:inherit; font-size:.95rem; font-weight:600; background:var(--accent); color:#fff;
+            border:none; border-radius:6px; padding:10px 24px; cursor:pointer; width:100%; }
+  .runbtn:disabled { opacity:.55; cursor:wait; }
+  .presets { display:flex; flex-wrap:wrap; gap:6px; }
+  .term { background:var(--term-bg); color:var(--term-ink);
+          font-family:Consolas,"Cascadia Code",ui-monospace,monospace; font-size:.8rem; line-height:1.65;
+          border-radius:6px; padding:14px 16px; overflow-x:auto; min-height:120px; }
+  .term .t-label { color:var(--term-accent); font-size:.66rem; letter-spacing:.14em;
+                   text-transform:uppercase; display:block; margin-bottom:8px; }
+  .term pre { margin:0; font-family:inherit; white-space:pre-wrap; }
+  .term .hl { color:var(--term-accent); }
+  .term .step { color:#8FB6BF; font-weight:700; }
+  .term .llm { color:#E8C87E; }
+  .pill { display:inline-block; font-size:.72rem; font-weight:700; letter-spacing:.07em;
+          padding:2px 10px; border-radius:999px; white-space:nowrap; }
+  .pill.low { background:var(--ok-bg); color:var(--ok-ink); }
+  .pill.high { background:var(--hi-bg); color:var(--hi-ink); }
+  .pill.esc { background:var(--esc-bg); color:var(--esc-ink); }
+  .verdict { display:flex; align-items:center; gap:12px; margin:16px 0 8px; flex-wrap:wrap; }
+  .verdict h3 { font-size:1rem; margin:0; }
+  ul.checklist { list-style:none; padding:0; margin:10px 0; font-size:.88rem; }
+  ul.checklist li { display:flex; gap:10px; padding:3px 0; align-items:baseline; }
+  ul.checklist .box { font-family:Consolas,ui-monospace,monospace; font-weight:700; }
+  ul.checklist li.ok .box { color:var(--ok-ink); }
+  ul.checklist li.miss { color:var(--hi-ink); } ul.checklist li.miss .box { color:var(--hi-ink); }
+  ul.checklist .note { color:var(--muted); font-size:.82rem; }
+  ul.checklist li.miss .note { color:inherit; opacity:.85; }
+  .finbox { background:var(--code-bg); border-radius:6px; padding:12px 16px; margin:12px 0; font-size:.85rem; max-width:560px; }
+  .finrow { display:flex; justify-content:space-between; gap:12px; padding:2px 0; }
+  .finrow .v { font-variant-numeric:tabular-nums; font-weight:600; white-space:nowrap; }
+  .finrow.total { border-top:1px solid var(--line); margin-top:4px; padding-top:6px; }
+  .expl { font-size:.88rem; color:var(--muted); max-width:70ch; }
+  .next { font-size:.86rem; padding-left:20px; }
+  .next li { margin:3px 0; }
+  .err { color:var(--hi-ink); font-size:.88rem; background:var(--hi-bg); border-radius:6px; padding:10px 14px; }
+  .chatbox { border-top:1px solid var(--line); margin-top:14px; padding-top:12px; }
+  .chatthread { display:flex; flex-direction:column; gap:8px; margin-bottom:10px; }
+  .chatq { font-size:.86rem; font-style:italic; color:var(--accent-deep); }
+  .chata { font-size:.86rem; color:var(--ink); max-width:70ch; white-space:pre-wrap; }
+  .chatrow { display:flex; gap:8px; }
+  .chatrow input { flex:1; }
+  .chatrow .runbtn { width:auto; padding:8px 18px; font-size:.85rem; }
+  code { font-family:Consolas,ui-monospace,monospace; font-size:.85em; background:var(--code-bg);
+         padding:1px 6px; border-radius:4px; }
+  footer { color:var(--muted); font-size:.78rem; margin-top:28px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Prior-Authorization Checklist Agent <span class="tag">LIVE — runs in your browser</span></h1>
+  <p class="sub">The full agent, no installation: policy retrieval and the completeness check run as
+  JavaScript in this page, and the two reasoning steps are real LLM calls made directly from your
+  browser. Yellow trace lines are live model calls — the pause is the model reading the policy.</p>
+
+  <div class="panel keycard" id="keycard" hidden>
+    <p class="lbl">One-time setup — connect an AI provider</p>
+    <div class="radio-row" style="margin-bottom:10px">
+      <label><input type="radio" name="provider" value="openai" checked> IU Kelley LLM hub (class token)</label>
+      <label><input type="radio" name="provider" value="anthropic"> Anthropic (your own key)</label>
+    </div>
+    <div id="prov-openai">
+      <p class="sub" style="margin-bottom:10px"><strong>Requires the IU VPN to be connected.</strong>
+      Paste the class API token. It is stored only in this browser on this computer
+      (localStorage) and sent only to the IU endpoint.</p>
+      <div class="keyrow" style="margin-bottom:8px">
+        <input type="password" id="iukey" placeholder="IU API token" autocomplete="off">
+      </div>
+      <div class="keyrow" style="margin-bottom:8px">
+        <input type="text" id="iubase" value="https://hub.kelley.iu.edu/llmapi/v1" title="Endpoint base URL">
+        <input type="text" id="iumodel" value="gpt-oss-20b" list="iumodels" title="Model name" style="max-width:200px">
+        <datalist id="iumodels"><option value="gpt-oss-20b"><option value="llama-4-scout"></datalist>
+      </div>
+    </div>
+    <div id="prov-anthropic" hidden>
+      <p class="sub" style="margin-bottom:10px">Create a key at
+      <a href="https://platform.claude.com" target="_blank" rel="noopener">platform.claude.com</a>
+      (billing must be enabled — each full run costs a few cents). The key is stored only in this
+      browser on this computer (localStorage) and sent only to the Anthropic API.</p>
+      <div class="keyrow" style="margin-bottom:8px">
+        <input type="password" id="antkey" placeholder="sk-ant-..." autocomplete="off">
+      </div>
+    </div>
+    <div class="keyrow">
+      <button type="button" class="runbtn" id="keysave">Save &amp; test connection</button>
+    </div>
+    <p class="err" id="keyerr" hidden></p>
+    <p class="keyok" id="keyok" hidden>Verified and saved — you're ready to run the agent.</p>
+  </div>
+
+  <div class="cols">
+    <div class="panel">
+      <fieldset>
+        <legend>Preset scenarios</legend>
+        <div class="presets" id="presets"></div>
+      </fieldset>
+      <fieldset>
+        <legend>1 · Payer</legend>
+        <div class="radio-row">
+          <label><input type="radio" name="payer" value="Acme Health" checked> Acme Health</label>
+          <label><input type="radio" name="payer" value="Beacon Insurance"> Beacon Insurance</label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>2 · Procedure requested</legend>
+        <input type="text" id="proc" value="Coronary artery bypass graft (CABG)">
+        <div class="chips">
+          <button type="button" class="chip">Coronary artery bypass graft (CABG)</button>
+          <button type="button" class="chip">Aortic valve replacement (TAVR)</button>
+          <button type="button" class="chip">Cardiac catheterization</button>
+          <button type="button" class="chip">Transcatheter valve intervention</button>
+          <button type="button" class="chip">Total knee replacement</button>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>3 · Documents in the submission</legend>
+        <div class="docgrid" id="docs"></div>
+      </fieldset>
+      <button type="button" class="runbtn" id="run">Run the agent</button>
+    </div>
+
+    <div>
+      <div class="term"><span class="t-label">Execution trace</span><pre id="tracepre">Waiting for a run...</pre></div>
+      <div id="result" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:18px">
+    <p class="lbl">Ask about this project — architecture &amp; design Q&amp;A</p>
+    <p class="sub" style="margin-bottom:10px">A chatbot grounded in this project's fact sheet.
+    Ask how the agent works, where the policy documents live, what's deterministic vs. LLM,
+    how it was tested, or why we made a design choice.</p>
+    <div class="chatthread" id="projthread"></div>
+    <div class="chatrow">
+      <input type="text" id="projinput" placeholder="e.g. Where are the policy documents housed?">
+      <button type="button" class="runbtn" id="projask">Ask</button>
+    </div>
+  </div>
+
+  <footer>Synthetic payers, policies and patients — coursework demo, not medical or coverage advice.
+  Model: <span id="modellabel">not configured yet</span> &middot;
+  <a href="#" id="changekey">change AI provider / key</a></footer>
+</main>
+
+<script>
+"use strict";
+
+// ================= embedded corpus (generated from /policies) =================
+var CORPUS = __CORPUS__;
+
+// ================= presets (generated from /scenarios) =================
+var PRESETS = __PRESETS__;
+
+var DOC_POOL = [
+  "Cardiology consultation note",
+  "Cardiothoracic surgery consultation note",
+  "Coronary angiography report",
+  "Transthoracic echocardiogram report (with LVEF)",
+  "Heart team conference / evaluation note",
+  "STS risk score worksheet",
+  "Surgical risk assessment (STS)",
+  "Smoking cessation counseling documentation",
+  "Referring physician order",
+  "Clinical notes documenting symptoms (angina / ischemia)",
+  "Noninvasive stress test results",
+  "Current medication list",
+  "Guideline-directed medical therapy documentation",
+  "Cardiac CT angiography (TAVR planning)",
+  "Frailty assessment documentation"
+];
+
+// ================= deterministic logic (port of agent.py) =================
+var STOP = new Set(["a","an","and","the","of","or","to","in","for","with","on","by","at","per","including"]);
+function norm(s) { return s.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim(); }
+function toks(s) {
+  var out = new Set();
+  norm(s).split(" ").forEach(function (t) { if (t && !STOP.has(t)) out.add(t); });
+  return out;
+}
+function tokMatch(a, b) {
+  if (a === b) return true;
+  var sh = a.length <= b.length ? a : b, lo = a.length <= b.length ? b : a;
+  return sh.length >= 4 && lo.indexOf(sh) !== -1;
+}
+function scorePolicy(proc, kws) {
+  var pn = norm(proc), pt = toks(proc), score = 0;
+  kws.forEach(function (kw) { if (pn.indexOf(norm(kw)) !== -1) score += 2; });
+  var kt = new Set();
+  kws.forEach(function (kw) { toks(kw).forEach(function (t) { kt.add(t); }); });
+  pt.forEach(function (t) {
+    var hit = false;
+    kt.forEach(function (k) { if (!hit && tokMatch(t, k)) hit = true; });
+    if (hit) score += 1;
+  });
+  return score;
+}
+function retrieve(payer, proc) {
+  var scored = CORPUS.policies
+    .filter(function (p) { return p.payer === payer; })
+    .map(function (p) { return { s: scorePolicy(proc, p.keywords), p: p }; })
+    .filter(function (x) { return x.s >= 2; })
+    .sort(function (a, b) { return b.s - a.s; });
+  if (!scored.length) return { status: "none", matches: [] };
+  var top = scored[0].s;
+  var close = scored.filter(function (x) { return x.s >= 0.75 * top; });
+  if (close.length > 1) return { status: "ambiguous", matches: close };
+  return { status: "ok", matches: [scored[0]] };
+}
+function findAddendum(id) {
+  return CORPUS.addenda.find(function (a) { return norm(a.addendum_id) === norm(id); }) || null;
+}
+function financialImpact(policy, check) {
+  // Deterministic tool: translates the completeness verdict into dollars.
+  // Synthetic coursework benchmarks (CORPUS.financials); the LLM narrates
+  // these numbers but never computes or invents them.
+  var fin = CORPUS.financials;
+  var reimbursement = policy.reimbursement_usd || 0;
+  var incomplete = check.missing_count > 0;
+  var rework = incomplete ? fin.rework_cost_per_pend_usd : 0;
+  var denialLoss = incomplete ? Math.round(reimbursement * fin.admin_denial_rate_after_pend) : 0;
+  return {
+    submission_status: incomplete ? "incomplete" : "complete",
+    reimbursement_at_risk_usd: reimbursement,
+    pend_window_days: policy.pend_window_days || 14,
+    rework_cost_usd: rework,
+    admin_denial_rate_after_pend: fin.admin_denial_rate_after_pend,
+    expected_admin_denial_loss_usd: denialLoss,
+    expected_cost_if_submitted_usd: rework + denialLoss,
+    benchmark_note: "synthetic coursework benchmarks"
+  };
+}
+function completeness(required, submitted) {
+  var present = [], missing = [];
+  required.forEach(function (req) {
+    var rn = norm(req), rt = toks(req);
+    var best = null, bestRank = [0, 0];
+    submitted.forEach(function (sub) {
+      var sn = norm(sub), st = toks(sub);
+      var hits = 0;
+      rt.forEach(function (t) { if (st.has(t)) hits += 1; });
+      var ov = rt.size ? hits / rt.size : 0;
+      var rank = null;
+      if (rn === sn || sn.indexOf(rn) !== -1 || rn.indexOf(sn) !== -1) rank = [2, ov];
+      else if (ov > 0.5) rank = [1, ov];
+      if (rank && (rank[0] > bestRank[0] || (rank[0] === bestRank[0] && rank[1] > bestRank[1]))) {
+        best = sub; bestRank = rank;
+      }
+    });
+    if (best) present.push({ required: req, matched_submission: best });
+    else missing.push(req);
+  });
+  return { present: present, missing: missing,
+           missing_count: missing.length, required_count: required.length };
+}
+
+// ================= LLM plumbing (port of agent.py backends) =================
+var CFG_KEY = "pa_llm_config";
+function loadCfg() {
+  try { return JSON.parse(localStorage.getItem(CFG_KEY)) || null; } catch (e) { return null; }
+}
+function saveCfg(cfg) { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); }
+
+var SCHEMAS = {
+  policy: {
+    type: "object",
+    properties: {
+      references_addendum: { type: "boolean" },
+      addendum_ids: { type: "array", items: { type: "string" } },
+      required_documents: { type: "array", items: { type: "string" } }
+    },
+    required: ["references_addendum", "addendum_ids", "required_documents"],
+    additionalProperties: false
+  },
+  addendum: {
+    type: "object",
+    properties: { required_documents: { type: "array", items: { type: "string" } } },
+    required: ["required_documents"],
+    additionalProperties: false
+  },
+  checklist: {
+    type: "object",
+    properties: {
+      risk_flag: { type: "string", enum: ["LOW", "HIGH"] },
+      explanation: { type: "string" },
+      checklist: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            item: { type: "string" },
+            status: { type: "string", enum: ["present", "missing"] },
+            note: { type: "string" }
+          },
+          required: ["item", "status", "note"],
+          additionalProperties: false
+        }
+      },
+      recommended_next_steps: { type: "array", items: { type: "string" } }
+    },
+    required: ["risk_flag", "explanation", "checklist", "recommended_next_steps"],
+    additionalProperties: false
+  }
+};
+
+var ANALYST_SYSTEM = "You are a prior-authorization policy analyst. You read synthetic payer " +
+  "policy documents and extract their documentation requirements exactly as written. Return each " +
+  "required document as a short canonical name of 2-6 words (e.g. 'Coronary angiography report') " +
+  "with no parenthetical qualifiers and no timeframes.";
+var REVIEWER_SYSTEM = "You are a prior-authorization completeness reviewer. You are given the " +
+  "output of a deterministic completeness-check tool and a deterministic financial-impact tool, " +
+  "and must produce a final submission checklist. " +
+  "Flag risk HIGH if any required document is missing (the submission would be pended or denied), " +
+  "LOW if the submission is complete. Write the explanation in plain English for a non-clinical " +
+  "operations audience, and weave in the financial stakes using ONLY the dollar figures provided " +
+  "by the financial-impact tool -- never invent or recalculate numbers.";
+
+async function llmAnthropic(cfg, system, prompt, schema) {
+  var resp = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": cfg.key,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true"
+    },
+    body: JSON.stringify({
+      model: "claude-opus-4-8", max_tokens: 16000, system: system,
+      messages: [{ role: "user", content: prompt }],
+      output_config: { format: { type: "json_schema", schema: schema } }
+    })
+  });
+  if (!resp.ok) {
+    var body = await resp.text();
+    if (resp.status === 401) throw new Error("NEEDKEY: Anthropic rejected the stored key.");
+    throw new Error("Anthropic API error " + resp.status + ": " + body.slice(0, 200));
+  }
+  var data = await resp.json();
+  if (data.stop_reason === "refusal") throw new Error("The model declined the request.");
+  var text = (data.content.find(function (b) { return b.type === "text"; }) || {}).text || "";
+  return JSON.parse(text);
+}
+
+function parseLenient(text) {
+  text = text.trim().replace(/^```[a-zA-Z]*\s*|\s*```$/g, "");
+  var s = text.indexOf("{"), e = text.lastIndexOf("}");
+  if (s === -1 || e <= s) throw new Error("no JSON object in reply");
+  return JSON.parse(text.slice(s, e + 1));
+}
+
+async function openaiChat(cfg, messages, wantJson) {
+  async function call(withFormat) {
+    var body = { model: cfg.model, messages: messages, max_tokens: 4000 };
+    if (withFormat) body.response_format = { type: "json_object" };
+    return fetch(cfg.base_url.replace(/\/+$/, "") + "/chat/completions", {
+      method: "POST",
+      headers: { "content-type": "application/json", "authorization": "Bearer " + cfg.key },
+      body: JSON.stringify(body)
+    });
+  }
+  // JSON mode only for the structured extraction steps — plain chat must NOT
+  // set response_format, or models wrap conversational answers in JSON.
+  var resp = await call(!!wantJson);
+  if (!resp.ok && wantJson && resp.status !== 401 && resp.status !== 403) resp = await call(false);
+  if (!resp.ok) {
+    var t = await resp.text();
+    if (resp.status === 401) throw new Error("NEEDKEY: The endpoint rejected the stored token.");
+    throw new Error("Endpoint error " + resp.status + ": " + t.slice(0, 200));
+  }
+  var data = await resp.json();
+  return (data.choices && data.choices[0].message.content) || "";
+}
+
+async function llmOpenAI(cfg, system, prompt, schema) {
+  var sysFull = system + "\n\nRespond with ONLY one JSON object that validates against this " +
+    "JSON Schema — no prose, no markdown fences:\n" + JSON.stringify(schema);
+  var messages = [{ role: "system", content: sysFull }, { role: "user", content: prompt }];
+  var reply = await openaiChat(cfg, messages, true);
+  for (var attempt = 0; attempt < 2; attempt++) {
+    try {
+      var data = parseLenient(reply);
+      var missing = (schema.required || []).filter(function (k) { return !(k in data); });
+      if (missing.length) throw new Error("missing required keys: " + missing.join(", "));
+      return data;
+    } catch (e) {
+      if (attempt === 1) throw new Error("Model did not return valid JSON: " + e.message);
+      messages.push({ role: "assistant", content: reply });
+      messages.push({ role: "user", content: "That was not valid (" + e.message +
+        "). Reply again with ONLY the corrected JSON object, nothing else." });
+      reply = await openaiChat(cfg, messages, true);
+    }
+  }
+}
+
+function llmJson(system, prompt, schema) {
+  var cfg = loadCfg();
+  if (!cfg) throw new Error("NEEDKEY: no provider configured");
+  return cfg.provider === "anthropic"
+    ? llmAnthropic(cfg, system, prompt, schema)
+    : llmOpenAI(cfg, system, prompt, schema);
+}
+
+// Plain-text chat (no JSON schema) — used by the follow-up Q&A.
+async function llmText(system, chatTurns) {
+  var cfg = loadCfg();
+  if (!cfg) throw new Error("NEEDKEY: no provider configured");
+  if (cfg.provider === "anthropic") {
+    var resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": cfg.key,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({ model: "claude-opus-4-8", max_tokens: 1000,
+                             system: system, messages: chatTurns })
+    });
+    if (!resp.ok) {
+      if (resp.status === 401) throw new Error("NEEDKEY: Anthropic rejected the stored key.");
+      throw new Error("Anthropic API error " + resp.status);
+    }
+    var data = await resp.json();
+    if (data.stop_reason === "refusal") throw new Error("The model declined the request.");
+    return (data.content.find(function (b) { return b.type === "text"; }) || {}).text || "";
+  }
+  return openaiChat(cfg, [{ role: "system", content: system }].concat(chatTurns));
+}
+
+function llmLabel() {
+  var cfg = loadCfg();
+  if (!cfg) return "not configured yet";
+  return cfg.provider === "anthropic" ? "Claude (claude-opus-4-8)" : cfg.model + " (IU hub)";
+}
+
+// ================= agent loop =================
+function analyzePolicyPrompt(body) {
+  return "Read the payer policy below.\n\n" +
+    "1. Does it cross-reference a separate ADDENDUM document that carries additional " +
+    "documentation requirements? If yes, list each addendum's identifier (e.g. 'MN-201') " +
+    "in addendum_ids.\n" +
+    "2. List the required documents stated in THIS policy's Required Documentation section " +
+    "only (do NOT invent addendum requirements you have not read).\n\n" +
+    "--- POLICY DOCUMENT ---\n" + body;
+}
+function analyzeAddendumPrompt(body) {
+  return "Read the policy ADDENDUM below and list the additional required documents it " +
+    "imposes.\n\n--- ADDENDUM DOCUMENT ---\n" + body;
+}
+function checklistPrompt(scenario, policy, addendaUsed, check, fin) {
+  return "Draft the final prior-authorization submission checklist.\n\n" +
+    "SUBMISSION:\n" + JSON.stringify(scenario, null, 2) + "\n\n" +
+    "GOVERNING POLICY: " + policy.policy_id + " - " + policy.procedure + " (" + policy.payer + ")\n" +
+    "ADDENDA APPLIED: " + (addendaUsed.length ? addendaUsed.join(", ") : "none") + "\n\n" +
+    "COMPLETENESS-CHECK TOOL OUTPUT:\n" + JSON.stringify(check, null, 2) +
+    "\n\nFINANCIAL-IMPACT TOOL OUTPUT:\n" + JSON.stringify(fin, null, 2);
+}
+
+// ================= UI =================
+var docsEl = document.getElementById("docs");
+DOC_POOL.forEach(function (d) {
+  var l = document.createElement("label");
+  var c = document.createElement("input");
+  c.type = "checkbox"; c.value = d;
+  l.appendChild(c); l.appendChild(document.createTextNode(" " + d));
+  docsEl.appendChild(l);
+});
+
+var procEl = document.getElementById("proc");
+document.querySelectorAll(".chip").forEach(function (ch) {
+  ch.addEventListener("click", function () { procEl.value = ch.textContent; });
+});
+
+var presetEl = document.getElementById("presets");
+PRESETS.forEach(function (p) {
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "chip"; b.textContent = p.label; b.title = p.description;
+  b.addEventListener("click", function () {
+    document.querySelectorAll('input[name=payer]').forEach(function (r) { r.checked = r.value === p.payer; });
+    procEl.value = p.procedure;
+    var boxes = docsEl.querySelectorAll("input");
+    boxes.forEach(function (cb) { cb.checked = false; });
+    p.documents.forEach(function (doc) {
+      var dn = doc.toLowerCase(); var best = null, bestScore = 0;
+      boxes.forEach(function (cb) {
+        var pn = cb.value.toLowerCase();
+        var dw = dn.replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter(Boolean);
+        var hits = dw.filter(function (w) { return pn.indexOf(w) !== -1; }).length;
+        var score = hits / dw.length;
+        if (score > bestScore) { bestScore = score; best = cb; }
+      });
+      if (best && bestScore >= 0.4) best.checked = true;
+    });
+  });
+  presetEl.appendChild(b);
+});
+
+var keycard = document.getElementById("keycard");
+var keyerr = document.getElementById("keyerr");
+var keyok = document.getElementById("keyok");
+var modellabel = document.getElementById("modellabel");
+modellabel.textContent = llmLabel();
+if (!loadCfg()) keycard.hidden = false;
+
+document.getElementById("changekey").addEventListener("click", function (e) {
+  e.preventDefault();
+  keycard.hidden = false;
+  keycard.scrollIntoView({ behavior: "smooth" });
+});
+
+document.querySelectorAll('input[name=provider]').forEach(function (radio) {
+  radio.addEventListener("change", function () {
+    var openai = document.querySelector('input[name=provider]:checked').value === "openai";
+    document.getElementById("prov-openai").hidden = !openai;
+    document.getElementById("prov-anthropic").hidden = openai;
+  });
+});
+
+document.getElementById("keysave").addEventListener("click", async function () {
+  var provider = document.querySelector('input[name=provider]:checked').value;
+  keyerr.hidden = true; keyok.hidden = true;
+  var btn = this; btn.disabled = true; btn.textContent = "Testing connection...";
+  try {
+    if (provider === "anthropic") {
+      var key = document.getElementById("antkey").value.trim();
+      if (!key.startsWith("sk-ant-")) throw new Error("That doesn't look like an Anthropic key — it should start with sk-ant-.");
+      var r = await fetch("https://api.anthropic.com/v1/messages/count_tokens", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-api-key": key,
+                   "anthropic-version": "2023-06-01",
+                   "anthropic-dangerous-direct-browser-access": "true" },
+        body: JSON.stringify({ model: "claude-opus-4-8",
+                               messages: [{ role: "user", content: "ping" }] })
+      });
+      if (r.status === 401) throw new Error("Anthropic rejected that key — check you copied the whole thing.");
+      if (!r.ok) throw new Error("API error while testing the key (" + r.status + ").");
+      saveCfg({ provider: "anthropic", key: key });
+    } else {
+      var tok = document.getElementById("iukey").value.trim();
+      var base = document.getElementById("iubase").value.trim().replace(/\/+$/, "");
+      var model = document.getElementById("iumodel").value.trim();
+      if (!tok) throw new Error("Paste the API token for the endpoint.");
+      if (!model) throw new Error("Enter the model name to use (e.g. gpt-oss-20b).");
+      var t = await fetch(base + "/chat/completions", {
+        method: "POST",
+        headers: { "content-type": "application/json", "authorization": "Bearer " + tok },
+        body: JSON.stringify({ model: model, max_tokens: 8,
+                               messages: [{ role: "user", content: "Reply with the word ok." }] })
+      }).catch(function () {
+        throw new Error("Could not reach " + base + " — are you connected to the IU VPN?");
+      });
+      if (t.status === 401) throw new Error("The endpoint rejected that token — check you copied the whole thing.");
+      if (!t.ok) {
+        // model may be team-restricted: ask the endpoint what this token CAN use
+        var models = [];
+        try {
+          var ml = await fetch(base + "/models", { headers: { "authorization": "Bearer " + tok } });
+          if (ml.ok) models = ((await ml.json()).data || []).map(function (m) { return m.id; });
+        } catch (e2) {}
+        if (models.length) {
+          var dl = document.getElementById("iumodels");
+          dl.innerHTML = "";
+          models.forEach(function (m) {
+            var o = document.createElement("option");
+            o.value = m; dl.appendChild(o);
+          });
+          document.getElementById("iumodel").value = models[0];
+          throw new Error("That token can't use model '" + model + "'. Models it can access: " +
+            models.join(", ") + " — pick one (I've filled in the first).");
+        }
+        throw new Error("Test call failed (" + t.status + "): " + (await t.text()).slice(0, 200));
+      }
+      saveCfg({ provider: "openai", key: tok, base_url: base, model: model });
+    }
+    modellabel.textContent = llmLabel();
+    keyok.hidden = false;
+    setTimeout(function () { keycard.hidden = true; }, 1800);
+  } catch (e) {
+    keyerr.textContent = e.message;
+    keyerr.hidden = false;
+  } finally {
+    btn.disabled = false; btn.textContent = "Save & test connection";
+  }
+});
+
+// ---- project Q&A wiring (always available, own history) ----
+var projTurns = [];
+(function wireProjectChat() {
+  var input = document.getElementById("projinput");
+  var btn = document.getElementById("projask");
+  var thread = document.getElementById("projthread");
+  async function ask() {
+    var q = input.value.trim();
+    if (!q || btn.disabled) return;
+    if (!loadCfg()) {
+      keycard.hidden = false;
+      keyerr.textContent = "Connect an AI provider first (one-time setup), then ask away.";
+      keyerr.hidden = false;
+      keycard.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    input.value = "";
+    var qEl = document.createElement("div");
+    qEl.className = "chatq"; qEl.textContent = "You: " + q;
+    thread.appendChild(qEl);
+    var aEl = document.createElement("div");
+    aEl.className = "chata"; aEl.textContent = "…thinking";
+    thread.appendChild(aEl);
+    btn.disabled = true;
+    projTurns.push({ role: "user", content: q });
+    if (projTurns.length > 13) projTurns = projTurns.slice(-13);  // odd count -> history still starts with a user turn
+    try {
+      var answer = extractPlain(await llmText(PROJECT_SYSTEM, projTurns));
+      projTurns.push({ role: "assistant", content: answer });
+      aEl.textContent = answer;
+    } catch (e) {
+      projTurns.pop();
+      aEl.textContent = "Could not get an answer: " + (e.message || e);
+      aEl.className = "chata err";
+    } finally {
+      btn.disabled = false;
+      input.focus();
+    }
+  }
+  btn.addEventListener("click", ask);
+  input.addEventListener("keydown", function (e) { if (e.key === "Enter") ask(); });
+})();
+
+// ---- run ----
+var runBtn = document.getElementById("run");
+var pre = document.getElementById("tracepre");
+var resultEl = document.getElementById("result");
+
+function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function pill(kind, text) { return '<span class="pill ' + kind + '">' + text + '</span>'; }
+function traceLine(text, opts) {
+  opts = opts || {};
+  var cls = opts.llm ? "llm" : (opts.hl ? "hl" : "");
+  var stepTag = opts.step ? '<span class="step">' + esc(opts.step) + '</span>  ' : "       ";
+  var line = document.createElement("span");
+  line.innerHTML = stepTag + (cls ? '<span class="' + cls + '">' : "") + "-&gt; " + esc(text) +
+                   (cls ? "</span>" : "") + "\n";
+  pre.appendChild(line);
+}
+
+function renderResult(result, policy, addendaUsed, fin) {
+  var risky = result.risk_flag === "HIGH";
+  var h = '<div class="panel" style="margin-top:14px">';
+  h += '<div class="verdict">' + pill(risky ? "high" : "low", "RISK: " + result.risk_flag) +
+       "<h3>" + esc(policy.policy_id) + " · " + esc(policy.procedure) +
+       (addendaUsed.length ? " + Addendum " + addendaUsed.join(", ") : "") + "</h3></div>";
+  h += '<ul class="checklist">';
+  (result.checklist || []).forEach(function (it) {
+    var ok = it.status === "present";
+    h += '<li class="' + (ok ? "ok" : "miss") + '"><span class="box">' + (ok ? "[x]" : "[ ]") +
+         "</span><span>" + esc(it.item) +
+         (it.note ? ' <span class="note">— ' + esc(it.note) + "</span>" : "") + "</span></li>";
+  });
+  h += "</ul>";
+  if (fin) {
+    var fmt = function (n) { return "$" + Number(n).toLocaleString(); };
+    h += '<div class="finbox"><p class="lbl">Financial impact — deterministic tool (synthetic benchmarks)</p>';
+    h += '<div class="finrow"><span>Reimbursement at risk</span><span class="v">' + fmt(fin.reimbursement_at_risk_usd) + '</span></div>';
+    if (fin.submission_status === "incomplete") {
+      h += '<div class="finrow"><span>Rework cost if pended</span><span class="v">' + fmt(fin.rework_cost_usd) + '</span></div>';
+      h += '<div class="finrow"><span>Expected admin-denial loss (' + Math.round(fin.admin_denial_rate_after_pend * 100) + '% of reimbursement)</span><span class="v">' + fmt(fin.expected_admin_denial_loss_usd) + '</span></div>';
+      h += '<div class="finrow total"><span>Expected cost if submitted as-is (+ ' + fin.pend_window_days + '-day pend delay)</span><span class="v">' + fmt(fin.expected_cost_if_submitted_usd) + '</span></div>';
+    } else {
+      h += '<div class="finrow total"><span>Pend/denial exposure — submission complete</span><span class="v">$0</span></div>';
+    }
+    h += "</div>";
+  }
+  h += '<p class="expl">' + esc(result.explanation) + "</p>";
+  if (result.recommended_next_steps && result.recommended_next_steps.length) {
+    h += '<p class="lbl" style="margin-top:14px">Next steps</p><ul class="next">';
+    result.recommended_next_steps.forEach(function (s) { h += "<li>" + esc(s) + "</li>"; });
+    h += "</ul>";
+  }
+  h += '<div class="chatbox"><p class="lbl">Ask the reviewer — follow-up on this checklist</p>';
+  h += '<div class="chatthread" id="chatthread"></div>';
+  h += '<div class="chatrow"><input type="text" id="chatinput" ' +
+       'placeholder="e.g. Why is the frailty assessment required?">' +
+       '<button type="button" class="runbtn" id="chatask">Ask</button></div></div>';
+  h += "</div>";
+  resultEl.innerHTML = h;
+  wireFollowup();
+}
+
+var FOLLOWUP_SYSTEM_BASE =
+  "You are the prior-authorization completeness reviewer who just produced the checklist in the " +
+  "RUN RECORD below. Answer the user's follow-up questions about this specific run. Ground every " +
+  "answer in the run record — the governing policy text, the completeness-check tool output, and " +
+  "the financial-impact tool output. Use ONLY the dollar figures provided by the financial-impact " +
+  "tool; never invent or recalculate numbers. If a question requires clinical judgment or goes " +
+  "beyond this run, say so plainly and recommend the payer policy or a human specialist. Keep " +
+  "answers to 2-5 sentences in plain English for a non-clinical operations audience. Write plain " +
+  "conversational text only -- no markdown, no asterisks, no bullet formatting, and never wrap " +
+  "your answer in JSON or braces.";
+
+// Some open models wrap chat answers in JSON despite instructions — unwrap them.
+function scrubTail(s) {
+  return s.replace(/[}"\s\u200B-\u200D\uFEFF]+$/, "").trim();
+}
+function extractPlain(t) {
+  t = String(t).trim().replace(/\*\*/g, "");
+  if (t[0] !== "{") return t;
+  try {
+    var o = JSON.parse(t);
+    var vals = Object.values(o).filter(function (v) { return typeof v === "string"; });
+    if (vals.length) return scrubTail(vals.join("\n"));
+  } catch (e) {
+    var m = t.match(/"(?:response|answer|text|message)"\s*:\s*"([\s\S]*)/);
+    if (m) {
+      var s = m[1];
+      var end = s.lastIndexOf('"');
+      if (end > 0) s = s.slice(0, end);
+      return scrubTail(s.replace(/\\n/g, "\n").replace(/\\"/g, '"'));
+    }
+  }
+  return t;
+}
+
+// ---- project Q&A chatbot: grounded in a curated fact sheet ----
+var PROJECT_FACTS = [
+  "WHAT IT IS: A proof-of-concept Prior-Authorization Checklist Agent built for an MBA agentic-AI course (X500 Design Studio). It checks whether an insurance prior-auth submission contains every document the payer's policy requires, computes the financial exposure of submitting incomplete, and escalates ambiguous cases to human review.",
+  "AGENT LOOP: Step 1 retrieval - keyword scoring over the policy corpus, filtered by payer; a minimum score threshold and a near-tie rule detect 'no match' and 'ambiguous' cases, which escalate to human review before any LLM call. Step 2 - the LLM reads the retrieved policy text, extracts required documents, and DECIDES whether the policy cross-references an addendum; if so the agent issues a second targeted retrieval and merges the addendum's requirements. Step 3 - completeness_check(), a deterministic function that fuzzy-matches required vs submitted documents (best-match ranking, containment beats token overlap). Step 3b - financial_impact(), deterministic: reimbursement at risk, rework cost, expected admin-denial loss. Step 4 - the LLM drafts the checklist, LOW/HIGH risk flag, and plain-English explanation, instructed to use ONLY tool-provided dollar figures.",
+  "DETERMINISTIC VS LLM: The verdict (what's missing) and every dollar figure come from plain code - repeatable and auditable. The LLM only does what code can't: reading unstructured policy prose from any payer without per-format parsers, deciding when an addendum fetch is needed, and writing for a non-clinical audience. Design mantra: the LLM never grades its own homework and never invents its own numbers.",
+  "WHERE THINGS LIVE: The six synthetic payer policies (2 fictional insurers x 3 cardiac procedures) and two addenda (MN-201, BI-MN-7) are markdown files with YAML frontmatter (payer, procedure, policy_id, keywords, reimbursement_usd, pend_window_days) in the team's project workspace, alongside financials.json (benchmark assumptions) and five test-scenario JSON files. A build script (update_site.py) embeds the whole corpus into this single static HTML page and deploys it. The public repo github.com/KilgoreC1024/prior-auth-agent-demo hosts the built page on GitHub Pages. A Python twin of the agent (agent.py CLI + Flask app) exists for development and batch runs.",
+  "ARCHITECTURE: This page is one ~60 KB static HTML file - no backend server, no database. Retrieval, completeness, and financial math run as JavaScript in the browser. The two LLM steps are HTTPS calls made directly from the user's browser to either the Anthropic API (claude-opus-4-8, schema-enforced JSON output) or any OpenAI-spec endpoint such as the IU Kelley LLM hub (schema embedded in prompt, lenient parsing, one repair retry). Browser-originated calls are why the IU VPN requirement is satisfied - a cloud server could never reach the VPN-gated endpoint.",
+  "KEYS & SECURITY: API tokens are entered once, live-tested, stored only in the user's browser localStorage, and sent only to the chosen LLM endpoint. No secrets exist in the page or repo. All data is synthetic - no real PHI anywhere. Prompt injection via malicious policy documents is the realistic future threat; mitigations: deterministic verdict the model can't override, schema-constrained outputs, human escalation on low confidence.",
+  "FINANCIALS: Reimbursement per procedure and pend windows live in policy frontmatter; shared benchmarks in financials.json (rework ~$44/pend, 8% admin-denial rate after pend). Basis: industry denial-rework averages ~$43.84 (range $25-$118); CAQH 2024 Index: manual PA $11.12 vs $2.11 electronic. Labeled synthetic coursework benchmarks. Example: incomplete TAVR = $4,684 expected cost on $58,000 at risk.",
+  "TESTING: Five benchmark scenarios (2 complete->LOW, 2 missing-docs->HIGH with exact missing documents named, 1 ambiguous->escalation) run across all implementations. 13 automated parity tests verify the JavaScript port matches the Python original. A real matcher bug (generic-token false match) was caught partly because the Step-4 LLM flagged the mismatch in its own explanation. Updates deploy via one command; GitHub Pages serves the built page in ~1 minute.",
+  "COSTS & ROADMAP: A full run costs a few cents on Anthropic, free on the IU class token. Roadmap: ingest real policy PDFs, automated evaluation harness, EHR work-queue integration.",
+].join("\n\n");
+
+var PROJECT_SYSTEM =
+  "You are the built-in guide for this project page, answering audience questions during a " +
+  "class presentation Q&A. Answer from the FACT SHEET below, plus reasonable general knowledge " +
+  "about the technologies it names. If the fact sheet doesn't cover something, say so plainly " +
+  "and suggest asking the team. Keep answers to 2-5 sentences, plain conversational text -- no " +
+  "markdown, no JSON, no braces. Never reveal or speculate about API keys or credentials.\n\n" +
+  "FACT SHEET:\n" + PROJECT_FACTS;
+
+var followupCtx = null;   // set after each completed run
+var chatTurns = [];
+
+function wireFollowup() {
+  chatTurns = [];
+  var input = document.getElementById("chatinput");
+  var btn = document.getElementById("chatask");
+  var thread = document.getElementById("chatthread");
+  async function ask() {
+    var q = input.value.trim();
+    if (!q || btn.disabled) return;
+    input.value = "";
+    var qEl = document.createElement("div");
+    qEl.className = "chatq"; qEl.textContent = "You: " + q;
+    thread.appendChild(qEl);
+    var aEl = document.createElement("div");
+    aEl.className = "chata"; aEl.textContent = "…thinking";
+    thread.appendChild(aEl);
+    btn.disabled = true;
+    chatTurns.push({ role: "user", content: q });
+    try {
+      var system = FOLLOWUP_SYSTEM_BASE + "\n\nRUN RECORD:\n" + JSON.stringify(followupCtx, null, 2);
+      var answer = extractPlain(await llmText(system, chatTurns));
+      chatTurns.push({ role: "assistant", content: answer });
+      aEl.textContent = answer;
+    } catch (e) {
+      chatTurns.pop();
+      aEl.textContent = "Could not get an answer: " + (e.message || e);
+      aEl.className = "chata err";
+    } finally {
+      btn.disabled = false;
+      input.focus();
+    }
+  }
+  btn.addEventListener("click", ask);
+  input.addEventListener("keydown", function (e) { if (e.key === "Enter") ask(); });
+}
+
+function renderEscalation(reason, payer, procedure, candidates) {
+  var h = '<div class="panel" style="margin-top:14px">';
+  h += '<div class="verdict">' + pill("esc", "ESCALATED") + "<h3>Routed to human review</h3></div>";
+  if (reason === "ambiguous") {
+    h += '<p class="expl">“' + esc(procedure) + "” plausibly matches " + candidates.length +
+         " different " + esc(payer) + " policies (" +
+         candidates.map(function (c) { return c.p.policy_id; }).join(", ") +
+         "). A confident wrong pick would apply the wrong requirements, so the agent hands off " +
+         "to a human intake specialist instead of guessing. No LLM tokens were spent.</p>";
+  } else {
+    h += '<p class="expl">' + esc(payer) + " has no prior-authorization policy matching “" +
+         esc(procedure) + "”. The agent escalates rather than inventing requirements.</p>";
+  }
+  h += "</div>";
+  resultEl.innerHTML = h;
+}
+
+runBtn.addEventListener("click", async function () {
+  if (!loadCfg()) {
+    keycard.hidden = false;
+    keyerr.textContent = "Connect an AI provider first (one-time setup).";
+    keyerr.hidden = false;
+    keycard.scrollIntoView({ behavior: "smooth" });
+    return;
+  }
+  var payer = document.querySelector('input[name=payer]:checked').value;
+  var procedure = procEl.value.trim() || "(blank)";
+  var submitted = Array.prototype.filter.call(docsEl.querySelectorAll("input"),
+    function (c) { return c.checked; }).map(function (c) { return c.value; });
+
+  runBtn.disabled = true;
+  resultEl.innerHTML = "";
+  pre.innerHTML = "";
+  var label = llmLabel().split(" ")[0];
+
+  try {
+    traceLine("searching embedded /policies for payer='" + payer + "' procedure='" + procedure + "'",
+              { step: "STEP 1" });
+    var r = retrieve(payer, procedure);
+
+    if (r.status === "none") {
+      traceLine("no " + payer + " policy matched procedure '" + procedure + "'", { hl: true });
+      traceLine("ESCALATING to human review: no governing policy found", { hl: true });
+      renderEscalation("none", payer, procedure, []);
+      return;
+    }
+    if (r.status === "ambiguous") {
+      traceLine("retrieval returned " + r.matches.length + " near-tied policy matches:", { hl: true });
+      r.matches.forEach(function (m) {
+        traceLine("   " + m.p.policy_id + " (" + m.p.procedure + ", score " + m.s + ")");
+      });
+      traceLine("ambiguity detected -- the agent will NOT guess", { hl: true });
+      traceLine("ESCALATING to human review", { hl: true });
+      renderEscalation("ambiguous", payer, procedure, r.matches);
+      return;
+    }
+
+    var policy = r.matches[0].p;
+    traceLine("retrieved " + policy.payer + " policy " + policy.policy_id + " '" +
+              policy.procedure + "' (score " + r.matches[0].s + ")");
+
+    traceLine("[" + label + "] reading the policy for addendum cross-references...",
+              { step: "STEP 2", llm: true });
+    var analysis = await llmJson(ANALYST_SYSTEM, analyzePolicyPrompt(policy.body), SCHEMAS.policy);
+    var required = (analysis.required_documents || []).slice();
+    var addendaUsed = [];
+
+    if (analysis.references_addendum && analysis.addendum_ids && analysis.addendum_ids.length) {
+      for (var i = 0; i < analysis.addendum_ids.length; i++) {
+        var addId = analysis.addendum_ids[i];
+        traceLine("detected addendum reference " + addId + " -> issuing second retrieval", { hl: true });
+        var addendum = findAddendum(addId);
+        if (!addendum) { traceLine("WARNING: addendum " + addId + " not found", { hl: true }); continue; }
+        traceLine("retrieved addendum " + addendum.addendum_id + " (" + addendum.filename + ")");
+        traceLine("[" + label + "] extracting requirements from addendum " + addId + "...", { llm: true });
+        var addReqs = (await llmJson(ANALYST_SYSTEM, analyzeAddendumPrompt(addendum.body),
+                                     SCHEMAS.addendum)).required_documents || [];
+        traceLine("addendum adds " + addReqs.length + " required document(s)");
+        required = required.concat(addReqs);
+        addendaUsed.push(addId);
+      }
+    } else {
+      traceLine("no addendum referenced -- proceeding with base policy requirements");
+    }
+    traceLine("combined requirement list: " + required.length + " document(s)");
+
+    traceLine("completeness_check(required, submitted)  [deterministic JS -- no LLM]", { step: "STEP 3" });
+    var check = completeness(required, submitted);
+    traceLine("completeness check: " + check.missing_count + " missing of " +
+              check.required_count + " required", { hl: check.missing_count > 0 });
+
+    var fin = financialImpact(policy, check);
+    if (fin.submission_status === "incomplete") {
+      traceLine("financial impact: $" + fin.expected_cost_if_submitted_usd.toLocaleString() +
+                " expected cost if submitted as-is ($" +
+                fin.reimbursement_at_risk_usd.toLocaleString() + " at risk)", { hl: true });
+    } else {
+      traceLine("financial impact: clean claim protects $" +
+                fin.reimbursement_at_risk_usd.toLocaleString() + " reimbursement");
+    }
+
+    traceLine("[" + label + "] reasoning over tool output -> drafting checklist + risk flag...",
+              { step: "STEP 4", llm: true });
+    var scenario = { payer: payer, procedure: procedure, documents_submitted: submitted };
+    var result = await llmJson(REVIEWER_SYSTEM,
+                               checklistPrompt(scenario, policy, addendaUsed, check, fin),
+                               SCHEMAS.checklist);
+    traceLine("final risk flag: " + result.risk_flag, { hl: result.risk_flag === "HIGH" });
+    followupCtx = {
+      governing_policy: { policy_id: policy.policy_id, payer: policy.payer,
+                          procedure: policy.procedure, full_text: policy.body },
+      addenda_applied: addendaUsed.map(function (id) {
+        var a = findAddendum(id);
+        return { addendum_id: id, full_text: a ? a.body : "(not found)" };
+      }),
+      submission: scenario,
+      combined_required_documents: required,
+      completeness_check_tool_output: check,
+      financial_impact_tool_output: fin,
+      final_checklist: result
+    };
+    renderResult(result, policy, addendaUsed, fin);
+  } catch (e) {
+    var msg = String(e.message || e);
+    if (msg.indexOf("NEEDKEY:") === 0) {
+      keycard.hidden = false;
+      keyerr.textContent = msg.slice(8).trim() + " Re-enter it above.";
+      keyerr.hidden = false;
+      keycard.scrollIntoView({ behavior: "smooth" });
+    } else if (msg.indexOf("Failed to fetch") !== -1 || msg.indexOf("NetworkError") !== -1) {
+      resultEl.innerHTML = '<p class="err">Could not reach the LLM endpoint. If you are using the ' +
+        "IU hub, check that the IU VPN is connected, then try again.</p>";
+    } else {
+      resultEl.innerHTML = '<p class="err">Agent error: ' + esc(msg) + "</p>";
+    }
+  } finally {
+    runBtn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

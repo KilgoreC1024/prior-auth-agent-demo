@@ -1,0 +1,11 @@
+{
+  "scenario_id": "S4",
+  "description": "Incomplete diagnostic cardiac catheterization submission to Acme Health — missing clinical symptom notes and prior stress test results",
+  "patient": "Synthetic Patient D (M, 71)",
+  "payer": "Acme Health",
+  "procedure": "Cardiac Catheterization",
+  "documents_submitted": [
+    "Physician referral order",
+    "Current medication list"
+  ]
+}
